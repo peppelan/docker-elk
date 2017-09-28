@@ -2,6 +2,35 @@ version: '2'
 
 services:
 
+  load_balancer:
+    image: dockercloud/haproxy
+    links:
+      - todolist
+    networks:
+      - dmz
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  todolist:
+    image: to-do-list
+    expose:
+      - "8080"
+      - "8081"
+    environment:
+      # Point to the docker load-balanced DNS alias for the ES cluster
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+      # TODO Default credentials for x-pack
+      ELASTICSEARCH_USERNAME: "elastic"
+      ELASTICSEARCH_PASSWORD: "changeme"
+      EXCLUDE_PORTS: 8081
+    networks:
+      - dmz
+      - elk
+    depends_on:
+      - elasticsearch
+
   elasticsearch:
     build: elasticsearch/
     volumes:
@@ -41,4 +70,7 @@ services:
 networks:
 
   elk:
+    driver: bridge
+
+  dmz:
     driver: bridge
